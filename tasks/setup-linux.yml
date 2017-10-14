@@ -1,0 +1,56 @@
+---
+# tasks file for ansible-role-packer
+
+- debug: var=ansible_python
+
+- set_fact:
+    packer_download_url: "https://releases.hashicorp.com/packer/1.1.1/packer_1.1.1_linux_amd64.zip"
+    packer_zip_filename: "packer_1.1.1_linux_amd64.zip"
+    packer_install_path: "/usr/local/bin/packer"
+    packer_zip_checksum: "e407566e2063ac697e0bbf6f2dd334be448d58bed93f44a186408bf1fc54c552"
+    packer_checksum: "f98a08ed81095f686c067b92ea1823b31964c40eb35edc30543930f142942974"
+
+- name: Download {{ packer_zip_filename }}
+  get_url:
+    url: "{{ packer_download_url }}"
+    dest: /tmp/{{ packer_zip_filename }}
+    checksum: sha256:{{ packer_zip_checksum }}
+    validate_certs: no
+
+- stat:
+    path: "{{ packer_install_path }}"
+    checksum_algorithm: sha256
+  register: existing_file
+
+- name: Set force_install to False if {{ packer_install_path }} match checksum
+  set_fact:
+    force_install: "{{ existing_file.stat.checksum != packer_checksum }}"
+  when: existing_file.stat.exists == True
+
+- name: Set force_install to True if {{ packer_install_path }} does not exist
+  set_fact:
+    force_install: True
+  when: existing_file.stat.exists == False
+
+- debug:
+    msg: "Valid packer checksum is {{ packer_checksum }}"
+
+- debug:
+    msg: "Calculated checksum for {{ packer_install_path }} is {{ existing_file.stat.checksum }}"
+  when: existing_file.stat.exists == True
+
+- debug:
+    msg: "Force install is True. Overwriting {{ packer_install_path }}"
+  when: force_install == True
+
+- debug:
+    msg: "Force install is False. NOT overwriting {{ packer_install_path }}"
+  when: force_install == False
+
+- name: Unarchive {{ packer_zip_filename }}
+  unarchive:
+    src: /tmp/{{ packer_zip_filename }}
+    dest: /usr/local/bin
+    mode: 0755
+  when: force_install == True
+

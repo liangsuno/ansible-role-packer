@@ -1,0 +1,9 @@
+---
+# tasks file for ansible-role-packer
+
+- include_tasks: setup-linux.yml
+  when: ansible_os_family == 'RedHat' or ansible_os_family == 'Debian'
+
+- debug:
+    msg: "This ansible role only supports RedHat or Debian or Ubuntu"
+  when: ansible_os_family != 'RedHat' and ansible_os_family != 'Debian'
